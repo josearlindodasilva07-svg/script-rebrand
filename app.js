@@ -99,7 +99,9 @@ function functionRanges(source) {
   const starts = /\bfunction\b/g;
   let match;
   while ((match = starts.exec(masked))) {
-    const start = match.index;
+    let start = match.index;
+    const lineStart = masked.lastIndexOf("\n", start - 1) + 1;
+    if (/^\s*local\s+$/.test(masked.slice(lineStart, start))) start = lineStart;
     const tail = masked.slice(start);
     const words = /\b(function|if|for|while|repeat|do|end|until)\b/g;
     let depth = 0, end = -1, word;
@@ -139,7 +141,8 @@ function findFunctionContaining(source, snippet) {
   const found = new RegExp(pattern, "i").exec(masked);
   if (!found) return null;
   const originalPosition = found.index;
-  const containing = functionRanges(source).filter((range) => range.start <= originalPosition && range.end >= originalPosition);
+  const matchEnd = originalPosition + found[0].length;
+  const containing = functionRanges(source).filter((range) => range.start <= matchEnd && range.end >= originalPosition);
   if (!containing.length) return null;
   const range = containing.sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
   return source.slice(range.start, range.end);
@@ -165,10 +168,13 @@ function extractDependencies(source, block) {
 }
 
 function extractFunction(source, query) {
+  if (!source.trim() || source.trim() === query.trim()) {
+    return "-- Cole o script completo no campo Script completo.\n-- Cole apenas o trecho de referência no campo de extração.";
+  }
   const block = findFunctionContaining(source, query) || findFunction(source, query);
   if (!block) return "-- Função não encontrada para o trecho: " + query.trim();
   const dependencies = extractDependencies(source, block).filter((line) => !block.includes(line));
-  return "-- Shadow Changer V2: função extraída a partir do trecho informado\n" +
+  return "-- Shadow Changer V3: função completa encontrada no script principal\n" +
     (dependencies.length ? "-- Dependências locais detectadas\n" + dependencies.join("\n") + "\n\n" : "") + block.trim() + "\n";
 }
 
