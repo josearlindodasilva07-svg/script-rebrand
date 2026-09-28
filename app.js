@@ -3,9 +3,8 @@
 const $ = (id) => document.getElementById(id);
 const els = {
   file: $("fileInput"), fileStatus: $("fileStatus"),
-  mergeFile: $("mergeFile"), mergeFileStatus: $("mergeFileStatus"), mergeScript: $("mergeScript"),
   script: $("scriptInput"), select: $("textSelect"), old: $("oldName"), next: $("newName"),
-  oldImg: $("oldImage"), newImg: $("newImage"), functionSelect: $("functionSelect"), out: $("resultOutput"), status: $("status"),
+  oldImg: $("oldImage"), newImg: $("newImage"), out: $("resultOutput"), status: $("status"),
   scan: $("scanStatus"), count: $("charCount"), info: $("resultInfo")
 };
 
@@ -238,30 +237,19 @@ $('fileInput').addEventListener('change', () => {
   reader.onerror = () => setStatus("Não foi possível ler o arquivo", "error");
   reader.readAsText(file);
 });
-els.mergeFile.addEventListener('change', () => {
-  const file = els.mergeFile.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => { els.mergeScript.value = String(reader.result || ""); els.mergeFileStatus.textContent = file.name; setStatus("Segundo arquivo carregado", "success"); };
-  reader.onerror = () => setStatus("Não foi possível ler o segundo arquivo", "error");
-  reader.readAsText(file);
-});
 $("scanButton").addEventListener("click", scanTexts);
 els.select.addEventListener("change", () => { if (els.select.value) els.old.value = els.select.value; });
-els.functionSelect.addEventListener("change", () => { if (els.functionSelect.value) $("functionName").value = els.functionSelect.value; });
-$("operation").addEventListener("change", (event) => { ["replacePanel", "extractPanel", "translatePanel"].forEach((id) => $(id).classList.add("hidden")); $(event.target.value === "replace" ? "replacePanel" : event.target.value === "extract" ? "extractPanel" : "translatePanel").classList.remove("hidden"); });
+$("operation").addEventListener("change", (event) => { ["replacePanel", "translatePanel"].forEach((id) => $(id).classList.add("hidden")); $(event.target.value === "replace" ? "replacePanel" : "translatePanel").classList.remove("hidden"); });
 $("processButton").addEventListener("click", () => {
   const source = els.script.value;
   if (!source.trim()) { setStatus("Cole um script primeiro", "error"); return; }
   let result = source;
   const operation = $("operation").value;
   if (operation === "replace") result = changeBrand(source);
-  if (operation === "extract") result = extractFunction(source, $("functionName").value);
   if (operation === "translate") result = translate(source, $("language").value);
-  if (operation === "merge") result = mergeScripts(source);
   els.out.value = result; updateCounts(); setStatus(result === source ? "Nenhuma alteração feita" : "Processado com sucesso", result === source ? "error" : "success");
 });
-$("clearButton").addEventListener("click", () => { els.script.value = ""; els.out.value = ""; els.old.value = ""; els.next.value = ""; els.oldImg.value = ""; els.newImg.value = ""; els.file.value = ""; els.mergeFile.value = ""; els.mergeScript.value = ""; els.fileStatus.textContent = "Nenhum arquivo"; els.mergeFileStatus.textContent = "Nenhum segundo arquivo"; $("functionName").value = ""; els.select.innerHTML = '<option value="">Cole o script e toque em “Encontrar textos”</option>'; els.functionSelect.innerHTML = '<option value="">Cole o script e toque em “Encontrar textos”</option>'; els.scan.textContent = "Nenhum texto analisado"; setStatus("Aguardando"); updateCounts(); });
+$("clearButton").addEventListener("click", () => { els.script.value = ""; els.out.value = ""; els.old.value = ""; els.next.value = ""; els.oldImg.value = ""; els.newImg.value = ""; els.file.value = ""; els.fileStatus.textContent = "Nenhum arquivo"; els.select.innerHTML = '<option value="">Cole o script e toque em “Encontrar textos”</option>'; els.scan.textContent = "Nenhum texto analisado"; setStatus("Aguardando"); updateCounts(); });
 $("copyButton").addEventListener("click", async () => { if (!els.out.value.trim()) { setStatus("Não há resultado para copiar", "error"); return; } try { await navigator.clipboard.writeText(els.out.value); } catch (error) { els.out.select(); document.execCommand("copy"); } setStatus("Resultado copiado", "success"); });
 $("downloadButton").addEventListener("click", () => { if (!els.out.value.trim()) { setStatus("Não há resultado para baixar", "error"); return; } const blob = new Blob([els.out.value], { type: "text/plain;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "script-atualizado.lua"; link.click(); URL.revokeObjectURL(link.href); setStatus("Arquivo baixado", "success"); });
 updateCounts();
