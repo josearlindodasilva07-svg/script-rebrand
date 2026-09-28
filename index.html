@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Script Rebrand</title>
+</head>
+<body>
+  <h1>Script Rebrand</h1>
+  <p>Altere o nome e a imagem do seu script.</p>
+
+  <label for="scriptInput">Script original</label>
+  <br>
+  <textarea
+    id="scriptInput"
+    rows="15"
+    cols="50"
+    placeholder="Cole seu script aqui..."
+  ></textarea>
+
+  <br><br>
+
+  <label for="oldName">Nome atual</label>
+  <br>
+  <input id="oldName" type="text" placeholder="Exemplo: Chilli Hub">
+
+  <br><br>
+
+  <label for="newName">Novo nome</label>
+  <br>
+  <input id="newName" type="text" placeholder="Exemplo: Fire Hub">
+
+  <br><br>
+
+  <label for="oldImage">ID da foto atual</label>
+  <br>
+  <input id="oldImage" type="text" placeholder="Exemplo: 123456789">
+
+  <br><br>
+
+  <label for="newImage">ID da foto nova</label>
+  <br>
+  <input id="newImage" type="text" placeholder="Exemplo: 987654321">
+
+  <br><br>
+
+  <button id="updateButton" type="button">
+    Atualizar script
+  </button>
+
+  <br><br>
+
+  <label for="resultOutput">Resultado</label>
+  <br>
+  <textarea
+    id="resultOutput"
+    rows="15"
+    cols="50"
+    readonly
+    placeholder="O resultado aparecerá aqui..."
+  ></textarea>
+
+  <br><br>
+
+  <button id="copyButton" type="button">
+    Copiar resultado
+  </button>
+
+  <p id="status">Aguardando</p>
+
+  <script src="app.js"></script>
+</body>
+</html>
