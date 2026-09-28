@@ -36,7 +36,6 @@ function replaceImageIds(source) {
 }
 
 function scanTexts() {
-  scanFunctions();
   const found = [], seen = new Set();
   const pattern = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
   let match;
@@ -57,27 +56,6 @@ function scanTexts() {
   els.scan.textContent = found.length + " texto(s) encontrado(s)";
 }
 
-function scanFunctions() {
-  const source = els.script.value;
-  const masked = maskLua(source);
-  const names = new Set();
-  const patterns = [
-    /\b(?:local\s+)?function\s+([A-Za-z_]\w*)(?:\s*[:.]\s*([A-Za-z_]\w*))?\s*\(/g,
-    /\b(?:local\s+)?([A-Za-z_]\w*)\s*=\s*function\s*\(/g
-  ];
-  patterns.forEach((pattern) => {
-    let match;
-    while ((match = pattern.exec(masked))) names.add(match[2] ? match[1] + "." + match[2] : match[1]);
-  });
-  els.functionSelect.innerHTML = "";
-  if (!names.size) {
-    els.functionSelect.innerHTML = '<option value="">Nenhuma função nomeada encontrada</option>';
-    return;
-  }
-  els.functionSelect.add(new Option("Selecione uma função encontrada", ""));
-  [...names].sort().forEach((name) => els.functionSelect.add(new Option(name, name)));
-}
-
 function changeBrand(source) {
   let result = source;
   const oldValue = els.old.value.trim();
@@ -90,119 +68,6 @@ function changeBrand(source) {
 
 function maskLua(source) {
   return source.replace(/(--\[(=*)\[[\s\S]*?\]\2\]|--[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\[(=*)\[[\s\S]*?\]\3\])/g, (part) => part.replace(/[^\n]/g, " "));
-}
-
-function functionRanges(source) {
-  const masked = maskLua(source);
-  const ranges = [];
-  const starts = /\bfunction\b/g;
-  let match;
-  while ((match = starts.exec(masked))) {
-    let start = match.index;
-    const lineStart = masked.lastIndexOf("\n", start - 1) + 1;
-    if (/^\s*local\s+$/.test(masked.slice(lineStart, start))) start = lineStart;
-    const tail = masked.slice(start);
-    const words = /\b(function|if|for|while|repeat|do|end|until)\b/g;
-    let depth = 0, end = -1, word;
-    while ((word = words.exec(tail))) {
-      if (["function", "if", "for", "while", "repeat", "do"].includes(word[1])) depth++;
-      else if (word[1] === "end" || word[1] === "until") {
-        depth--;
-        if (depth === 0) { end = start + word.index + word[0].length; break; }
-      }
-    }
-    if (end > start) {
-      const header = masked.slice(Math.max(0, start - 80), Math.min(masked.length, start + 160));
-      const named = /function\s+([A-Za-z_]\w*(?:\s*[.:]\s*[A-Za-z_]\w*)?)/.exec(header);
-      ranges.push({ start, end, name: named ? named[1].replace(/\s+/g, "") : "(função anônima)" });
-    }
-  }
-  return ranges;
-}
-
-function findFunction(source, name) {
-  const query = name.trim();
-  if (!query) return null;
-  const masked = maskLua(source);
-  const normalized = query.replace(/\s+/g, "");
-  const ranges = functionRanges(source);
-  const named = ranges.filter((range) => range.name !== "(função anônima)" &&
-    (range.name.toLowerCase() === normalized.toLowerCase() || range.name.toLowerCase().endsWith("." + normalized.toLowerCase())));
-  if (named.length) return source.slice(named[0].start, named[0].end);
-  return findFunctionContaining(source, query);
-}
-
-function findFunctionContaining(source, snippet) {
-  const raw = snippet.trim();
-  if (!raw) return null;
-  const masked = maskLua(source);
-  const pattern = raw.split(/\s+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
-  const found = new RegExp(pattern, "i").exec(masked);
-  if (!found) return null;
-  const originalPosition = found.index;
-  const matchEnd = originalPosition + found[0].length;
-  const containing = functionRanges(source).filter((range) => range.start <= matchEnd && range.end >= originalPosition);
-  if (!containing.length) return null;
-  const range = containing.sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
-  return source.slice(range.start, range.end);
-}
-
-function extractDependencies(source, block) {
-  const maskedSource = maskLua(source);
-  const targetStart = source.indexOf(block);
-  const ranges = functionRanges(source);
-  const selected = new Set();
-  const fragments = new Map();
-  const names = new Set();
-  const ignored = new Set(["local", "function", "if", "then", "end", "true", "false", "nil", "and", "or", "not", "task", "game", "self"]);
-  const addNames = (text) => {
-    const words = maskLua(text).match(/\b[A-Za-z_]\w*\b/g) || [];
-    words.forEach((word) => { if (!ignored.has(word)) names.add(word); });
-  };
-  addNames(block);
-  const addRange = (range) => {
-    const key = range.start + ":" + range.end;
-    if (selected.has(key)) return false;
-    selected.add(key);
-    fragments.set(range.start, source.slice(range.start, range.end).trim());
-    addNames(source.slice(range.start, range.end));
-    return true;
-  };
-  let changed = true;
-  while (changed) {
-    changed = false;
-    ranges.forEach((range) => {
-      if (range.start === targetStart || range.name === "(função anônima)") return;
-      const shortName = range.name.split(".").pop();
-      if (names.has(shortName) && addRange(range)) changed = true;
-    });
-  }
-  const lines = source.split(/\r?\n/);
-  let cursor = 0;
-  lines.forEach((line) => {
-    const lineStart = cursor; cursor += line.length + 1;
-    if (lineStart >= targetStart && lineStart < targetStart + block.length) return;
-    const insideFunction = ranges.some((range) => range.start < lineStart && range.end > lineStart && range.start !== targetStart);
-    if (insideFunction) return;
-    const clean = maskLua(line).trim();
-    if (!clean) return;
-    const declaration = /^(?:local\s+)?([A-Za-z_]\w*)\s*=/.exec(clean);
-    const mentionsDependency = [...names].some((name) => new RegExp("\\b" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(clean));
-    const guiLine = /(?:Instance\.new|Create|Parent|Position|Size|Text|Visible|Enabled|MouseButton|Activated|Frame|Button|Gui|ScreenGui|UICorner|UIStroke|UIListLayout)/i.test(clean);
-    if ((declaration && names.has(declaration[1])) || (mentionsDependency && guiLine)) fragments.set(lineStart, line.trim());
-  });
-  return [...fragments.entries()].sort((a, b) => a[0] - b[0]).map((entry) => entry[1]).filter((item, index, all) => item && all.indexOf(item) === index);
-}
-
-function extractFunction(source, query) {
-  if (!source.trim() || source.trim() === query.trim()) {
-    return "-- Cole o script completo no campo Script completo.\n-- Cole apenas o trecho de referência no campo de extração.";
-  }
-  const block = findFunctionContaining(source, query) || findFunction(source, query);
-  if (!block) return "-- Função não encontrada para o trecho: " + query.trim();
-  const dependencies = extractDependencies(source, block).filter((line) => !block.includes(line));
-  return "-- Shadow Changer V5: função completa + dependências conectadas encontradas no script principal\n" +
-    (dependencies.length ? "-- Funções, objetos e configuração da GUI relacionados\n" + dependencies.join("\n\n") + "\n\n" : "") + block.trim() + "\n";
 }
 
 const terms = {
@@ -219,14 +84,6 @@ function translate(source, language) {
   let result = source;
   Object.keys(aliases).sort((a, b) => b.length - a.length).forEach((from) => { if (from !== aliases[from]) result = replaceInsideStrings(result, from, aliases[from], false); });
   return result;
-}
-
-function mergeScripts(source) {
-  const addition = els.mergeScript.value;
-  if (!addition.trim()) return source;
-  const separator = "\n\n-- Shadow Changer: segundo script adicionado abaixo --\n\n";
-  const content = $("wrapMerge").checked ? "do\n" + addition.trim() + "\nend" : addition.trim();
-  return source.trimEnd() + separator + content + "\n";
 }
 
 $('fileInput').addEventListener('change', () => {
@@ -253,3 +110,27 @@ $("clearButton").addEventListener("click", () => { els.script.value = ""; els.ou
 $("copyButton").addEventListener("click", async () => { if (!els.out.value.trim()) { setStatus("Não há resultado para copiar", "error"); return; } try { await navigator.clipboard.writeText(els.out.value); } catch (error) { els.out.select(); document.execCommand("copy"); } setStatus("Resultado copiado", "success"); });
 $("downloadButton").addEventListener("click", () => { if (!els.out.value.trim()) { setStatus("Não há resultado para baixar", "error"); return; } const blob = new Blob([els.out.value], { type: "text/plain;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "script-atualizado.lua"; link.click(); URL.revokeObjectURL(link.href); setStatus("Arquivo baixado", "success"); });
 updateCounts();
+
+
+// Shadow Changer visual dashboard
+const themeButton = $("themeButton");
+const musicButton = $("musicButton");
+const body = document.body;
+const savedTheme = localStorage.getItem("shadow-theme");
+if (savedTheme === "light") body.classList.add("light-theme");
+themeButton.addEventListener("click", () => { body.classList.toggle("light-theme"); localStorage.setItem("shadow-theme", body.classList.contains("light-theme") ? "light" : "dark"); });
+const visits = Number(localStorage.getItem("shadow-visits") || 0) + 1;
+localStorage.setItem("shadow-visits", visits);
+$("visitorCount").textContent = String(visits).padStart(3, "0");
+function updateDashboardClock() { const now = new Date(); const time = now.toLocaleTimeString("pt-BR"); $("digitalClock").textContent = time; $("heroClock").textContent = time; $("dateToday").textContent = now.toLocaleDateString("pt-BR"); }
+updateDashboardClock(); setInterval(updateDashboardClock, 1000);
+setTimeout(() => $("loadingScreen").classList.add("hide"), 700);
+const canvas = $("particles"), ctx = canvas.getContext("2d");
+let particles = [];
+function resizeParticles() { canvas.width = innerWidth; canvas.height = innerHeight; particles = Array.from({length: Math.min(75, Math.floor(innerWidth / 14))}, () => ({x: Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.8+.3,v:Math.random()*.35+.08,a:Math.random()*.7+.15})); }
+function drawParticles() { ctx.clearRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.y += p.v; if(p.y > canvas.height) p.y = -4; ctx.globalAlpha=p.a; ctx.fillStyle="#8d82ff"; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); requestAnimationFrame(drawParticles); }
+resizeParticles(); addEventListener("resize", resizeParticles); drawParticles();
+const cursorGlow = $("cursorGlow");
+addEventListener("pointermove", event => { cursorGlow.style.left = event.clientX + "px"; cursorGlow.style.top = event.clientY + "px"; });
+let audioContext, oscillator, gain;
+musicButton.addEventListener("click", () => { if (!audioContext) { audioContext = new (window.AudioContext || window.webkitAudioContext)(); oscillator = audioContext.createOscillator(); gain = audioContext.createGain(); oscillator.type="sine"; oscillator.frequency.value=110; gain.gain.value=.018; oscillator.connect(gain).connect(audioContext.destination); oscillator.start(); musicButton.textContent="♫ ON"; } else if (audioContext.state === "running") { audioContext.suspend(); musicButton.textContent="♫"; } else { audioContext.resume(); musicButton.textContent="♫ ON"; } });
