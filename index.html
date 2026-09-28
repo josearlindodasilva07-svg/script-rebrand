@@ -1,46 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080812">
-  <title>Shadow Changer</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div id="loadingScreen" class="loading-screen"><div class="loading-logo">SC</div><strong>SHADOW CHANGER</strong><span>inicializando painel...</span><div class="loading-bar"><i></i></div></div>
-  <canvas id="particles" aria-hidden="true"></canvas><div id="cursorGlow" aria-hidden="true"></div>
-  <main class="app">
-    <header class="topbar">
-      <a class="brand" href="#top" aria-label="Shadow Changer início"><span class="brand-mark">SC</span><span><b>SHADOW</b><em>CHANGER</em></span></a>
-      <nav class="nav-links"><a href="#tools">Ferramentas</a><a href="#news">Novidades</a><a href="#changelog">Changelog</a><a href="https://discord.com" target="_blank" rel="noreferrer">Discord</a></nav>
-      <div class="quick-actions"><button id="themeButton" class="icon-button" type="button" title="Alternar tema">☼</button><button id="musicButton" class="icon-button" type="button" title="Música ambiente">♫</button></div>
-    </header>
-
-    <section id="top" class="hero-banner">
-      <div class="hero-copy"><p class="eyebrow">SCRIPT TOOLKIT · V5</p><h1>Rebrand your<br><span>Lua universe.</span></h1><p class="hero-text">Troque nomes, imagens e textos visuais do seu script Roblox com segurança. Tudo local, rápido e sem enviar seu código.</p><div class="hero-buttons"><a class="primary" href="#tools">Abrir ferramenta <span>→</span></a><a class="ghost" href="#news">Ver novidades</a></div></div>
-      <div class="moon-scene" aria-label="Lua e personagem Shadow"><div class="moon"></div><div class="pixel-shadow"><i></i><b></b><em></em></div><span class="scene-star s1">✦</span><span class="scene-star s2">·</span><span class="scene-star s3">✧</span></div>
-      <div class="hero-status"><span><i class="online-dot"></i><b id="onlineStatus">ONLINE</b></span><small id="heroClock">--:--:--</small></div>
-    </section>
-
-    <section class="stats-grid"><article class="stat-card"><span class="stat-icon">◷</span><div><small>HORA LOCAL</small><strong id="digitalClock">--:--:--</strong><em id="dateToday">--/--/----</em></div></article><article class="stat-card"><span class="stat-icon">◉</span><div><small>VISITANTES NESTE DISPOSITIVO</small><strong id="visitorCount">001</strong><em>contador local</em></div></article><article class="stat-card"><span class="stat-icon">◈</span><div><small>STATUS DO SISTEMA</small><strong class="green">OPERACIONAL</strong><em>processamento no navegador</em></div></article></section>
-
-    <section id="tools" class="tool-layout"><div class="tool-heading"><div><p class="eyebrow">SHADOW LAB</p><h2>Ferramentas</h2></div><span class="version-pill">V5.0 LOCAL</span></div>
-      <section class="card file-card"><div class="card-title"><div><span class="step">00</span><h2>Arquivo principal</h2></div><span id="fileStatus">Nenhum arquivo</span></div><input id="fileInput" type="file" accept=".lua,.luau,.txt"><p class="hint">Selecione um script ou cole o código abaixo.</p></section>
-      <section class="card"><div class="card-title"><div><span class="step">01</span><h2>Script principal</h2></div><span id="charCount">0 caracteres</span></div><textarea id="scriptInput" spellcheck="false" placeholder="Cole seu script Lua/Luau aqui..."></textarea><div class="source-actions"><button id="scanButton" class="soft" type="button">Encontrar textos</button><span id="scanStatus">Nenhum texto analisado</span></div></section>
-      <section class="card"><div class="card-title"><div><span class="step">02</span><h2>Ferramenta</h2></div><span class="safe-label">● SAFE MODE</span></div><label for="operation">Operação</label><select id="operation"><option value="replace">Trocar nome e imagem</option><option value="translate">Traduzir somente textos visuais</option></select>
-        <div id="replacePanel"><label for="textSelect">Texto encontrado</label><select id="textSelect"><option value="">Cole o script e toque em “Encontrar textos”</option></select><div class="two-cols"><div><label for="oldName">Valor atual</label><input id="oldName" placeholder="Ex.: Chilli Hub"></div><div><label for="newName">Novo valor</label><input id="newName" placeholder="Ex.: Fire Hub"></div></div><div class="divider"><span>Foto Roblox opcional</span></div><div class="two-cols"><div><label for="oldImage">ID atual</label><input id="oldImage" inputmode="numeric" placeholder="123456789"></div><div><label for="newImage">Novo ID</label><input id="newImage" inputmode="numeric" placeholder="987654321"></div></div></div>
-        <div id="translatePanel" class="hidden"><label for="language">Idioma visual de destino</label><select id="language"><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select><p class="hint">A tradução altera apenas textos entre aspas. Nomes de funções, variáveis e chamadas permanecem intactos.</p></div>
-      </section>
-      <div class="main-actions"><button id="processButton" class="primary" type="button">Processar <span>→</span></button><button id="clearButton" class="soft" type="button">Limpar</button></div>
-      <section class="card result-card"><div class="card-title"><div><span class="step">03</span><h2>Resultado</h2></div><span id="status" class="status">Aguardando</span></div><textarea id="resultOutput" spellcheck="false" readonly placeholder="O resultado aparecerá aqui..."></textarea><div class="result-actions"><span id="resultInfo">0 caracteres</span><div><button id="downloadButton" class="soft" type="button">Baixar .lua</button><button id="copyButton" class="primary" type="button">Copiar</button></div></div></section>
-    </section>
-
-    <section id="news" class="info-grid"><article class="info-card featured"><div class="card-label">▣ UPDATE ALERT</div><h3>Shadow Changer V5 chegou</h3><p>Interface renovada, processamento local e modo seguro para alterar somente o que é visual no seu script.</p><div class="progress-label"><span>Atualização instalada</span><b>100%</b></div><div class="progress"><i></i></div></article><article class="info-card"><div class="card-label">◒ NEWS</div><h3>Novidades</h3><ul><li>Dashboard neon mobile-first</li><li>Troca de nome e imagem</li><li>Tradução visual em 3 idiomas</li><li>Arquivo Lua direto no navegador</li></ul></article></section>
-    <section id="changelog" class="changelog"><div><p class="eyebrow">RELEASE NOTES</p><h2>Changelog</h2></div><div class="release"><b>V5.0</b><span>Visual Shadow + tema claro/escuro + painel local</span><time>AGORA</time></div><div class="release"><b>V4.0</b><span>Melhorias na segurança das alterações visuais</span><time>ANTERIOR</time></div></section>
-    <footer><div class="footer-brand"><span class="brand-mark small">SC</span><span>SHADOW CHANGER</span></div><div class="socials"><a href="https://discord.com" target="_blank" rel="noreferrer">Discord</a><a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a><a href="https://youtube.com" target="_blank" rel="noreferrer">YouTube</a></div><span>V5.0 · Feito para criadores Lua</span></footer>
-  </main>
-  <div class="mascot" aria-label="Mascote Shadow"><span>◢</span><small>shadow</small></div>
-  <script src="app.js"></script>
-</body>
-</html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shadow Changer</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="glow glow-one"></div><div class="glow glow-two"></div><main class="app">
+<header class="hero"><div class="brand-mark">SC</div><div><p class="eyebrow">SCRIPT TOOLKIT · V5</p><h1>Shadow Changer</h1><p class="subtitle">Edite textos, imagens e partes visuais do seu script.</p></div><span class="badge">LOCAL</span></header>
+<section class="card file-card"><div class="card-title"><div><span class="step">00</span><h2>Arquivo principal</h2></div><span id="fileStatus">Nenhum arquivo</span></div><input id="fileInput" type="file" accept=".lua,.luau,.txt"><p class="hint">Selecione o script principal ou cole o código abaixo.</p></section>
+<section class="card"><div class="card-title"><div><span class="step">01</span><h2>Script principal</h2></div><span id="charCount">0 caracteres</span></div><textarea id="scriptInput" spellcheck="false" placeholder="Cole seu script Lua/Luau aqui..."></textarea><div class="source-actions"><button id="scanButton" class="soft" type="button">Encontrar textos</button><span id="scanStatus">Nenhum texto analisado</span></div></section>
+<section class="card"><div class="card-title"><div><span class="step">02</span><h2>Ferramenta</h2></div></div><label for="operation">Operação</label><select id="operation"><option value="replace">Trocar nome e imagem</option><option value="translate">Traduzir somente textos visuais</option></select>
+<div id="replacePanel"><label for="textSelect">Texto encontrado</label><select id="textSelect"><option value="">Cole o script e toque em “Encontrar textos”</option></select><div class="two-cols"><div><label for="oldName">Valor atual</label><input id="oldName" placeholder="Ex.: Chilli Hub"></div><div><label for="newName">Novo valor</label><input id="newName" placeholder="Ex.: Fire Hub"></div></div><div class="divider"><span>Foto Roblox opcional</span></div><div class="two-cols"><div><label for="oldImage">ID atual</label><input id="oldImage" inputmode="numeric" placeholder="123456789"></div><div><label for="newImage">Novo ID</label><input id="newImage" inputmode="numeric" placeholder="987654321"></div></div></div>
+<div id="translatePanel" class="hidden"><label for="language">Idioma visual de destino</label><select id="language"><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select><p class="hint">A tradução altera apenas textos entre aspas. Nomes de funções, variáveis e chamadas permanecem intactos.</p></div></section>
+<div class="main-actions"><button id="processButton" class="primary" type="button">Processar <span>→</span></button><button id="clearButton" class="soft" type="button">Limpar</button></div>
+<section class="card result-card"><div class="card-title"><div><span class="step">03</span><h2>Resultado</h2></div><span id="status" class="status">Aguardando</span></div><textarea id="resultOutput" spellcheck="false" readonly placeholder="O resultado aparecerá aqui..."></textarea><div class="result-actions"><span id="resultInfo">0 caracteres</span><div><button id="downloadButton" class="soft" type="button">Baixar .lua</button><button id="copyButton" class="primary" type="button">Copiar</button></div></div></section><footer>Processamento local no navegador. O código não é enviado por este site.</footer></main><script src="app.js"></script></body></html>
