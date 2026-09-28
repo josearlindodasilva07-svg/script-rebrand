@@ -110,27 +110,3 @@ $("clearButton").addEventListener("click", () => { els.script.value = ""; els.ou
 $("copyButton").addEventListener("click", async () => { if (!els.out.value.trim()) { setStatus("Não há resultado para copiar", "error"); return; } try { await navigator.clipboard.writeText(els.out.value); } catch (error) { els.out.select(); document.execCommand("copy"); } setStatus("Resultado copiado", "success"); });
 $("downloadButton").addEventListener("click", () => { if (!els.out.value.trim()) { setStatus("Não há resultado para baixar", "error"); return; } const blob = new Blob([els.out.value], { type: "text/plain;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "script-atualizado.lua"; link.click(); URL.revokeObjectURL(link.href); setStatus("Arquivo baixado", "success"); });
 updateCounts();
-
-
-// Shadow Changer visual dashboard
-const themeButton = $("themeButton");
-const musicButton = $("musicButton");
-const body = document.body;
-const savedTheme = localStorage.getItem("shadow-theme");
-if (savedTheme === "light") body.classList.add("light-theme");
-themeButton.addEventListener("click", () => { body.classList.toggle("light-theme"); localStorage.setItem("shadow-theme", body.classList.contains("light-theme") ? "light" : "dark"); });
-const visits = Number(localStorage.getItem("shadow-visits") || 0) + 1;
-localStorage.setItem("shadow-visits", visits);
-$("visitorCount").textContent = String(visits).padStart(3, "0");
-function updateDashboardClock() { const now = new Date(); const time = now.toLocaleTimeString("pt-BR"); $("digitalClock").textContent = time; $("heroClock").textContent = time; $("dateToday").textContent = now.toLocaleDateString("pt-BR"); }
-updateDashboardClock(); setInterval(updateDashboardClock, 1000);
-setTimeout(() => $("loadingScreen").classList.add("hide"), 700);
-const canvas = $("particles"), ctx = canvas.getContext("2d");
-let particles = [];
-function resizeParticles() { canvas.width = innerWidth; canvas.height = innerHeight; particles = Array.from({length: Math.min(75, Math.floor(innerWidth / 14))}, () => ({x: Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.8+.3,v:Math.random()*.35+.08,a:Math.random()*.7+.15})); }
-function drawParticles() { ctx.clearRect(0,0,canvas.width,canvas.height); particles.forEach(p => { p.y += p.v; if(p.y > canvas.height) p.y = -4; ctx.globalAlpha=p.a; ctx.fillStyle="#8d82ff"; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); requestAnimationFrame(drawParticles); }
-resizeParticles(); addEventListener("resize", resizeParticles); drawParticles();
-const cursorGlow = $("cursorGlow");
-addEventListener("pointermove", event => { cursorGlow.style.left = event.clientX + "px"; cursorGlow.style.top = event.clientY + "px"; });
-let audioContext, oscillator, gain;
-musicButton.addEventListener("click", () => { if (!audioContext) { audioContext = new (window.AudioContext || window.webkitAudioContext)(); oscillator = audioContext.createOscillator(); gain = audioContext.createGain(); oscillator.type="sine"; oscillator.frequency.value=110; gain.gain.value=.018; oscillator.connect(gain).connect(audioContext.destination); oscillator.start(); musicButton.textContent="♫ ON"; } else if (audioContext.state === "running") { audioContext.suspend(); musicButton.textContent="♫"; } else { audioContext.resume(); musicButton.textContent="♫ ON"; } });
