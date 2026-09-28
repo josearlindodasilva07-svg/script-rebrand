@@ -85,15 +85,6 @@ function changeBrand(source) {
   const newValue = els.next.value.trim();
   if (oldValue && newValue) {
     result = replaceInsideStrings(result, oldValue, newValue, true);
-    if ($("replaceParts").checked) {
-      const oldParts = oldValue.split(/\s+/);
-      const newParts = newValue.split(/\s+/);
-      if (oldParts.length === newParts.length) {
-        oldParts.forEach((part, index) => {
-          if (part.length > 2) result = replaceInsideStrings(result, part, newParts[index], true);
-        });
-      }
-    }
   }
   return replaceImageIds(result);
 }
@@ -135,8 +126,32 @@ function findFunction(source, name) {
   return last === -1 ? source.slice(start) : source.slice(start, start + last);
 }
 
+function findFunctionContaining(source, snippet) {
+  const raw = snippet.trim();
+  if (!raw) return null;
+  const compact = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+  const snippetMatch = new RegExp(compact, "m").exec(maskLua(source));
+  if (!snippetMatch) return null;
+  const position = snippetMatch.index;
+  const masked = maskLua(source.slice(0, position));
+  const starts = [];
+  const startPattern = /(?:local\s+)?function\s+[A-Za-z_]\w*(?:\s*[:.]\s*[A-Za-z_]\w*)?\s*\(|(?:local\s+)?[A-Za-z_]\w*\s*=\s*function\s*\(/g;
+  let start;
+  while ((start = startPattern.exec(masked))) starts.push(start.index);
+  if (!starts.length) return null;
+  const startIndex = starts[starts.length - 1];
+  const tail = maskLua(source).slice(startIndex);
+  const words = /\b(function|if|for|while|repeat|do|end|until)\b/g;
+  let depth = 0, last = -1, word;
+  while ((word = words.exec(tail))) {
+    if (["function", "if", "for", "while", "do", "repeat"].includes(word[1])) depth++;
+    else if (word[1] === "end" || word[1] === "until") { depth--; if (depth === 0) { last = word.index + word[0].length; break; } }
+  }
+  return last === -1 ? source.slice(startIndex) : source.slice(startIndex, startIndex + last);
+}
+
 function extractFunction(source, name) {
-  const block = findFunction(source, name);
+  const block = findFunctionContaining(source, name) || findFunction(source, name);
   if (!block) return "-- Função não encontrada: " + name;
   return "-- Extração segura da função: " + name + "\n" + block.trim() + "\n";
 }
