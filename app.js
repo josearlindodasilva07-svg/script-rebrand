@@ -164,6 +164,26 @@ function extractDependencies(source, block) {
     const helper = source.slice(range.start, range.end).trim();
     if (helper && !block.includes(helper)) extras.push(helper);
   });
+  const names = new Set();
+  const referencePattern = /\b([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\b/g;
+  let reference;
+  while ((reference = referencePattern.exec(maskedBlock))) {
+    const root = reference[1].split(".")[0];
+    if (!["local", "function", "if", "then", "end", "true", "false", "nil", "and", "or", "not", "task", "game", "self"].includes(root)) names.add(root);
+  }
+  const lines = source.split(/\r?\n/);
+  const blockStart = source.indexOf(block);
+  let cursor = 0;
+  lines.forEach((line) => {
+    const lineStart = cursor; cursor += line.length + 1;
+    if (lineStart >= blockStart && lineStart < blockStart + block.length) return;
+    const clean = maskLua(line).trim();
+    const declaration = /^(local\s+)?([A-Za-z_]\w*)\s*=/.exec(clean);
+    if (declaration && names.has(declaration[2]) && !extras.includes(line.trim())) extras.unshift(line.trim());
+    const mentionsGuiName = [...names].some((name) => new RegExp("\\b" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(clean));
+    const looksLikeGuiSetup = mentionsGuiName && /(?:Instance\.new|Create|Parent|Position|Size|Text|Visible|Enabled|MouseButton|Activated|Frame|Button|Gui|ScreenGui|UICorner|UIStroke|UIListLayout)/i.test(clean);
+    if (looksLikeGuiSetup && line.trim() && !/^local\s+function\b|^function\b/.test(clean) && !extras.includes(line.trim())) extras.push(line.trim());
+  });
   return extras;
 }
 
@@ -174,8 +194,8 @@ function extractFunction(source, query) {
   const block = findFunctionContaining(source, query) || findFunction(source, query);
   if (!block) return "-- Função não encontrada para o trecho: " + query.trim();
   const dependencies = extractDependencies(source, block).filter((line) => !block.includes(line));
-  return "-- Shadow Changer V3: função completa encontrada no script principal\n" +
-    (dependencies.length ? "-- Dependências locais detectadas\n" + dependencies.join("\n") + "\n\n" : "") + block.trim() + "\n";
+  return "-- Shadow Changer V4: função completa encontrada no script principal\n" +
+    (dependencies.length ? "-- GUI e dependências detectadas no script principal\n" + dependencies.join("\n") + "\n\n" : "") + block.trim() + "\n";
 }
 
 const terms = {
