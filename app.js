@@ -149,42 +149,50 @@ function findFunctionContaining(source, snippet) {
 }
 
 function extractDependencies(source, block) {
-  const maskedBlock = maskLua(block);
-  const declarations = /(?:^|\n)\s*(local\s+[A-Za-z_]\w*\s*=\s*[^\n]+|function\s+([A-Za-z_]\w*)[^\n]*)/g;
-  const extras = [];
-  let declaration;
-  while ((declaration = declarations.exec(source))) {
-    const line = declaration[1];
-    const name = declaration[2] || /local\s+([A-Za-z_]\w*)/.exec(line)?.[1];
-    if (name && new RegExp("\\b" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(maskedBlock)) extras.push(line);
-  }
-  const called = functionRanges(source).filter((range) => range.name !== "(função anônima)" &&
-    range.name.split(".").every((part) => new RegExp("\\b" + part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(maskedBlock)));
-  called.forEach((range) => {
-    const helper = source.slice(range.start, range.end).trim();
-    if (helper && !block.includes(helper)) extras.push(helper);
-  });
+  const maskedSource = maskLua(source);
+  const targetStart = source.indexOf(block);
+  const ranges = functionRanges(source);
+  const selected = new Set();
+  const fragments = new Map();
   const names = new Set();
-  const referencePattern = /\b([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\b/g;
-  let reference;
-  while ((reference = referencePattern.exec(maskedBlock))) {
-    const root = reference[1].split(".")[0];
-    if (!["local", "function", "if", "then", "end", "true", "false", "nil", "and", "or", "not", "task", "game", "self"].includes(root)) names.add(root);
+  const ignored = new Set(["local", "function", "if", "then", "end", "true", "false", "nil", "and", "or", "not", "task", "game", "self"]);
+  const addNames = (text) => {
+    const words = maskLua(text).match(/\b[A-Za-z_]\w*\b/g) || [];
+    words.forEach((word) => { if (!ignored.has(word)) names.add(word); });
+  };
+  addNames(block);
+  const addRange = (range) => {
+    const key = range.start + ":" + range.end;
+    if (selected.has(key)) return false;
+    selected.add(key);
+    fragments.set(range.start, source.slice(range.start, range.end).trim());
+    addNames(source.slice(range.start, range.end));
+    return true;
+  };
+  let changed = true;
+  while (changed) {
+    changed = false;
+    ranges.forEach((range) => {
+      if (range.start === targetStart || range.name === "(função anônima)") return;
+      const shortName = range.name.split(".").pop();
+      if (names.has(shortName) && addRange(range)) changed = true;
+    });
   }
   const lines = source.split(/\r?\n/);
-  const blockStart = source.indexOf(block);
   let cursor = 0;
   lines.forEach((line) => {
     const lineStart = cursor; cursor += line.length + 1;
-    if (lineStart >= blockStart && lineStart < blockStart + block.length) return;
+    if (lineStart >= targetStart && lineStart < targetStart + block.length) return;
+    const insideFunction = ranges.some((range) => range.start < lineStart && range.end > lineStart && range.start !== targetStart);
+    if (insideFunction) return;
     const clean = maskLua(line).trim();
-    const declaration = /^(local\s+)?([A-Za-z_]\w*)\s*=/.exec(clean);
-    if (declaration && names.has(declaration[2]) && !extras.includes(line.trim())) extras.unshift(line.trim());
-    const mentionsGuiName = [...names].some((name) => new RegExp("\\b" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(clean));
-    const looksLikeGuiSetup = mentionsGuiName && /(?:Instance\.new|Create|Parent|Position|Size|Text|Visible|Enabled|MouseButton|Activated|Frame|Button|Gui|ScreenGui|UICorner|UIStroke|UIListLayout)/i.test(clean);
-    if (looksLikeGuiSetup && line.trim() && !/^local\s+function\b|^function\b/.test(clean) && !extras.includes(line.trim())) extras.push(line.trim());
+    if (!clean) return;
+    const declaration = /^(?:local\s+)?([A-Za-z_]\w*)\s*=/.exec(clean);
+    const mentionsDependency = [...names].some((name) => new RegExp("\\b" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(clean));
+    const guiLine = /(?:Instance\.new|Create|Parent|Position|Size|Text|Visible|Enabled|MouseButton|Activated|Frame|Button|Gui|ScreenGui|UICorner|UIStroke|UIListLayout)/i.test(clean);
+    if ((declaration && names.has(declaration[1])) || (mentionsDependency && guiLine)) fragments.set(lineStart, line.trim());
   });
-  return extras;
+  return [...fragments.entries()].sort((a, b) => a[0] - b[0]).map((entry) => entry[1]).filter((item, index, all) => item && all.indexOf(item) === index);
 }
 
 function extractFunction(source, query) {
@@ -194,8 +202,8 @@ function extractFunction(source, query) {
   const block = findFunctionContaining(source, query) || findFunction(source, query);
   if (!block) return "-- Função não encontrada para o trecho: " + query.trim();
   const dependencies = extractDependencies(source, block).filter((line) => !block.includes(line));
-  return "-- Shadow Changer V4: função completa encontrada no script principal\n" +
-    (dependencies.length ? "-- GUI e dependências detectadas no script principal\n" + dependencies.join("\n") + "\n\n" : "") + block.trim() + "\n";
+  return "-- Shadow Changer V5: função completa + dependências conectadas encontradas no script principal\n" +
+    (dependencies.length ? "-- Funções, objetos e configuração da GUI relacionados\n" + dependencies.join("\n\n") + "\n\n" : "") + block.trim() + "\n";
 }
 
 const terms = {
