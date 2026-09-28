@@ -93,67 +93,83 @@ function maskLua(source) {
   return source.replace(/(--\[(=*)\[[\s\S]*?\]\2\]|--[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\[(=*)\[[\s\S]*?\]\3\])/g, (part) => part.replace(/[^\n]/g, " "));
 }
 
-function findFunction(source, name) {
-  const rawName = name.trim();
-  if (!rawName) return null;
-  const variants = [...new Set([
-    rawName,
-    rawName.replace(/\s+/g, ""),
-    rawName.replace(/\s+/g, "_"),
-    rawName.replace(/[-\s]+/g, "_")
-  ])];
-  let match = null;
-  for (const variant of variants) {
-    const safe = variant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const startPattern = new RegExp(
-      "(?:local\\s+)?function\\s+(?:[A-Za-z_]\\w*[.:])?" + safe + "\\s*\\(|(?:local\\s+)?" + safe + "\\s*=\\s*function\\s*\\(", "im"
-    );
-    match = startPattern.exec(source);
-    if (match) break;
-  }
-  if (!match) return null;
+function functionRanges(source) {
   const masked = maskLua(source);
-  const start = match.index;
-  const tail = masked.slice(start);
-  const words = /\b(function|if|for|while|repeat|do|end|until)\b/g;
-  let depth = 0, last = -1, word;
-  while ((word = words.exec(tail))) {
-    if (["function", "if", "for", "while", "do"].includes(word[1])) depth++;
-    else if (word[1] === "repeat") depth++;
-    else if (word[1] === "end") { depth--; if (depth === 0) { last = word.index + word[0].length; break; } }
-    else if (word[1] === "until") { depth--; if (depth === 0) { last = word.index + word[0].length; break; } }
+  const ranges = [];
+  const starts = /\bfunction\b/g;
+  let match;
+  while ((match = starts.exec(masked))) {
+    const start = match.index;
+    const tail = masked.slice(start);
+    const words = /\b(function|if|for|while|repeat|do|end|until)\b/g;
+    let depth = 0, end = -1, word;
+    while ((word = words.exec(tail))) {
+      if (["function", "if", "for", "while", "repeat", "do"].includes(word[1])) depth++;
+      else if (word[1] === "end" || word[1] === "until") {
+        depth--;
+        if (depth === 0) { end = start + word.index + word[0].length; break; }
+      }
+    }
+    if (end > start) {
+      const header = masked.slice(Math.max(0, start - 80), Math.min(masked.length, start + 160));
+      const named = /function\s+([A-Za-z_]\w*(?:\s*[.:]\s*[A-Za-z_]\w*)?)/.exec(header);
+      ranges.push({ start, end, name: named ? named[1].replace(/\s+/g, "") : "(função anônima)" });
+    }
   }
-  return last === -1 ? source.slice(start) : source.slice(start, start + last);
+  return ranges;
+}
+
+function findFunction(source, name) {
+  const query = name.trim();
+  if (!query) return null;
+  const masked = maskLua(source);
+  const normalized = query.replace(/\s+/g, "");
+  const ranges = functionRanges(source);
+  const named = ranges.filter((range) => range.name !== "(função anônima)" &&
+    (range.name.toLowerCase() === normalized.toLowerCase() || range.name.toLowerCase().endsWith("." + normalized.toLowerCase())));
+  if (named.length) return source.slice(named[0].start, named[0].end);
+  return findFunctionContaining(source, query);
 }
 
 function findFunctionContaining(source, snippet) {
   const raw = snippet.trim();
   if (!raw) return null;
-  const compact = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
-  const snippetMatch = new RegExp(compact, "m").exec(maskLua(source));
-  if (!snippetMatch) return null;
-  const position = snippetMatch.index;
-  const masked = maskLua(source.slice(0, position));
-  const starts = [];
-  const startPattern = /(?:local\s+)?function\s+[A-Za-z_]\w*(?:\s*[:.]\s*[A-Za-z_]\w*)?\s*\(|(?:local\s+)?[A-Za-z_]\w*\s*=\s*function\s*\(/g;
-  let start;
-  while ((start = startPattern.exec(masked))) starts.push(start.index);
-  if (!starts.length) return null;
-  const startIndex = starts[starts.length - 1];
-  const tail = maskLua(source).slice(startIndex);
-  const words = /\b(function|if|for|while|repeat|do|end|until)\b/g;
-  let depth = 0, last = -1, word;
-  while ((word = words.exec(tail))) {
-    if (["function", "if", "for", "while", "do", "repeat"].includes(word[1])) depth++;
-    else if (word[1] === "end" || word[1] === "until") { depth--; if (depth === 0) { last = word.index + word[0].length; break; } }
-  }
-  return last === -1 ? source.slice(startIndex) : source.slice(startIndex, startIndex + last);
+  const masked = maskLua(source);
+  const pattern = raw.split(/\s+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
+  const found = new RegExp(pattern, "i").exec(masked);
+  if (!found) return null;
+  const originalPosition = found.index;
+  const containing = functionRanges(source).filter((range) => range.start <= originalPosition && range.end >= originalPosition);
+  if (!containing.length) return null;
+  const range = containing.sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
+  return source.slice(range.start, range.end);
 }
 
-function extractFunction(source, name) {
-  const block = findFunctionContaining(source, name) || findFunction(source, name);
-  if (!block) return "-- Função não encontrada: " + name;
-  return "-- Extração segura da função: " + name + "\n" + block.trim() + "\n";
+function extractDependencies(source, block) {
+  const maskedBlock = maskLua(block);
+  const declarations = /(?:^|\n)\s*(local\s+[A-Za-z_]\w*\s*=\s*[^\n]+|function\s+([A-Za-z_]\w*)[^\n]*)/g;
+  const extras = [];
+  let declaration;
+  while ((declaration = declarations.exec(source))) {
+    const line = declaration[1];
+    const name = declaration[2] || /local\s+([A-Za-z_]\w*)/.exec(line)?.[1];
+    if (name && new RegExp("\\b" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(maskedBlock)) extras.push(line);
+  }
+  const called = functionRanges(source).filter((range) => range.name !== "(função anônima)" &&
+    range.name.split(".").every((part) => new RegExp("\\b" + part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(maskedBlock)));
+  called.forEach((range) => {
+    const helper = source.slice(range.start, range.end).trim();
+    if (helper && !block.includes(helper)) extras.push(helper);
+  });
+  return extras;
+}
+
+function extractFunction(source, query) {
+  const block = findFunctionContaining(source, query) || findFunction(source, query);
+  if (!block) return "-- Função não encontrada para o trecho: " + query.trim();
+  const dependencies = extractDependencies(source, block).filter((line) => !block.includes(line));
+  return "-- Shadow Changer V2: função extraída a partir do trecho informado\n" +
+    (dependencies.length ? "-- Dependências locais detectadas\n" + dependencies.join("\n") + "\n\n" : "") + block.trim() + "\n";
 }
 
 const terms = {
