@@ -4,70 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Script Rebrand</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Script Rebrand</h1>
-  <p>Altere o nome e a imagem do seu script.</p>
+  <div class="glow glow-one"></div><div class="glow glow-two"></div>
+  <main class="app">
+    <header class="hero">
+      <div class="brand-mark">SR</div>
+      <div><p class="eyebrow">SCRIPT TOOLKIT</p><h1>Script Rebrand</h1><p class="subtitle">Troque nomes, IDs e textos do seu script sem procurar linha por linha.</p></div>
+      <span class="badge">LOCAL</span>
+    </header>
 
-  <label for="scriptInput">Script original</label>
-  <br>
-  <textarea
-    id="scriptInput"
-    rows="15"
-    cols="50"
-    placeholder="Cole seu script aqui..."
-  ></textarea>
+    <section class="workspace">
+      <div class="card source-card">
+        <div class="card-title"><div><span class="step">01</span><h2>Script original</h2></div><span id="charCount">0 caracteres</span></div>
+        <textarea id="scriptInput" spellcheck="false" placeholder="Cole seu script Lua/Luau aqui..."></textarea>
+        <div class="source-actions"><button id="scanButton" class="soft" type="button">Encontrar textos</button><span id="scanStatus">Nenhum texto analisado</span></div>
+      </div>
 
-  <br><br>
+      <div class="card options-card">
+        <div class="card-title"><div><span class="step">02</span><h2>Escolha o que trocar</h2></div></div>
+        <label for="textSelect">Texto encontrado no script</label>
+        <select id="textSelect"><option value="">Cole o script e toque em “Encontrar textos”</option></select>
+        <div class="two-cols"><div><label for="oldName">Valor atual</label><input id="oldName" type="text" placeholder="Selecione ou digite"></div><div><label for="newName">Novo valor</label><input id="newName" type="text" placeholder="Ex.: Fire Hub"></div></div>
+        <div class="divider"><span>Foto Roblox opcional</span></div>
+        <div class="two-cols"><div><label for="oldImage">ID atual</label><input id="oldImage" inputmode="numeric" type="text" placeholder="123456789"></div><div><label for="newImage">Novo ID</label><input id="newImage" inputmode="numeric" type="text" placeholder="987654321"></div></div>
+        <p class="hint">Se o script não tiver logo, deixe os campos de foto vazios. A troca usa somente valores que você confirmar.</p>
+      </div>
+    </section>
 
-  <label for="oldName">Nome atual</label>
-  <br>
-  <input id="oldName" type="text" placeholder="Exemplo: Chilli Hub">
+    <div class="main-actions"><button id="updateButton" class="primary" type="button">Atualizar script <span>→</span></button><button id="clearButton" class="soft" type="button">Limpar</button></div>
 
-  <br><br>
-
-  <label for="newName">Novo nome</label>
-  <br>
-  <input id="newName" type="text" placeholder="Exemplo: Fire Hub">
-
-  <br><br>
-
-  <label for="oldImage">ID da foto atual</label>
-  <br>
-  <input id="oldImage" type="text" placeholder="Exemplo: 123456789">
-
-  <br><br>
-
-  <label for="newImage">ID da foto nova</label>
-  <br>
-  <input id="newImage" type="text" placeholder="Exemplo: 987654321">
-
-  <br><br>
-
-  <button id="updateButton" type="button">
-    Atualizar script
-  </button>
-
-  <br><br>
-
-  <label for="resultOutput">Resultado</label>
-  <br>
-  <textarea
-    id="resultOutput"
-    rows="15"
-    cols="50"
-    readonly
-    placeholder="O resultado aparecerá aqui..."
-  ></textarea>
-
-  <br><br>
-
-  <button id="copyButton" type="button">
-    Copiar resultado
-  </button>
-
-  <p id="status">Aguardando</p>
-
+    <section class="card result-card">
+      <div class="card-title"><div><span class="step">03</span><h2>Resultado</h2></div><span id="status" class="status">Aguardando</span></div>
+      <textarea id="resultOutput" spellcheck="false" readonly placeholder="O script atualizado aparecerá aqui..."></textarea>
+      <div class="result-actions"><span id="resultInfo">0 caracteres</span><button id="copyButton" class="primary" type="button">Copiar resultado</button></div>
+    </section>
+    <footer>Processamento feito no navegador. O código não é enviado por este site.</footer>
+  </main>
   <script src="app.js"></script>
 </body>
 </html>
