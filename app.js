@@ -52,7 +52,7 @@ function scanTexts() {
     return;
   }
   els.select.add(new Option("Selecione um texto encontrado", ""));
-  found.forEach((value) => els.select.add(new Option(value.length > 65 ? value.slice(0, 65) + "…" : value, value)));
+  found.forEach((value) => els.select.add(new Option(value.length > 65 ? value.slice(0, 65) + "â€¦" : value, value)));
   els.scan.textContent = found.length + " texto(s) encontrado(s)";
 }
 
@@ -71,11 +71,11 @@ function maskLua(source) {
 }
 
 const terms = {
-  close: { pt: "Fechar", en: "Close", es: "Cerrar" }, settings: { pt: "Configurações", en: "Settings", es: "Configuración" },
-  loading: { pt: "Carregando", en: "Loading", es: "Cargando" }, button: { pt: "Botão", en: "Button", es: "Botón" },
+  close: { pt: "Fechar", en: "Close", es: "Cerrar" }, settings: { pt: "ConfiguraÃ§Ãµes", en: "Settings", es: "ConfiguraciÃ³n" },
+  loading: { pt: "Carregando", en: "Loading", es: "Cargando" }, button: { pt: "BotÃ£o", en: "Button", es: "BotÃ³n" },
   open: { pt: "Abrir", en: "Open", es: "Abrir" }, search: { pt: "Pesquisar", en: "Search", es: "Buscar" },
   save: { pt: "Salvar", en: "Save", es: "Guardar" }, cancel: { pt: "Cancelar", en: "Cancel", es: "Cancelar" },
-  yes: { pt: "Sim", en: "Yes", es: "Sí" }, no: { pt: "Não", en: "No", es: "No" },
+  yes: { pt: "Sim", en: "Yes", es: "SÃ­" }, no: { pt: "NÃ£o", en: "No", es: "No" },
   enabled: { pt: "Ativado", en: "Enabled", es: "Activado" }, disabled: { pt: "Desativado", en: "Disabled", es: "Desactivado" }
 };
 function translate(source, language) {
@@ -91,7 +91,7 @@ $('fileInput').addEventListener('change', () => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => { els.script.value = String(reader.result || ""); els.fileStatus.textContent = file.name; updateCounts(); scanTexts(); setStatus("Arquivo carregado", "success"); };
-  reader.onerror = () => setStatus("Não foi possível ler o arquivo", "error");
+  reader.onerror = () => setStatus("NÃ£o foi possÃ­vel ler o arquivo", "error");
   reader.readAsText(file);
 });
 $("scanButton").addEventListener("click", scanTexts);
@@ -104,9 +104,9 @@ $("processButton").addEventListener("click", () => {
   const operation = $("operation").value;
   if (operation === "replace") result = changeBrand(source);
   if (operation === "translate") result = translate(source, $("language").value);
-  els.out.value = result; updateCounts(); setStatus(result === source ? "Nenhuma alteração feita" : "Processado com sucesso", result === source ? "error" : "success");
+  els.out.value = result; updateCounts(); setStatus(result === source ? "Nenhuma alteraÃ§Ã£o feita" : "Processado com sucesso", result === source ? "error" : "success");
 });
-$("clearButton").addEventListener("click", () => { els.script.value = ""; els.out.value = ""; els.old.value = ""; els.next.value = ""; els.oldImg.value = ""; els.newImg.value = ""; els.file.value = ""; els.fileStatus.textContent = "Nenhum arquivo"; els.select.innerHTML = '<option value="">Cole o script e toque em “Encontrar textos”</option>'; els.scan.textContent = "Nenhum texto analisado"; setStatus("Aguardando"); updateCounts(); });
-$("copyButton").addEventListener("click", async () => { if (!els.out.value.trim()) { setStatus("Não há resultado para copiar", "error"); return; } try { await navigator.clipboard.writeText(els.out.value); } catch (error) { els.out.select(); document.execCommand("copy"); } setStatus("Resultado copiado", "success"); });
-$("downloadButton").addEventListener("click", () => { if (!els.out.value.trim()) { setStatus("Não há resultado para baixar", "error"); return; } const blob = new Blob([els.out.value], { type: "text/plain;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "script-atualizado.lua"; link.click(); URL.revokeObjectURL(link.href); setStatus("Arquivo baixado", "success"); });
+$("clearButton").addEventListener("click", () => { els.script.value = ""; els.out.value = ""; els.old.value = ""; els.next.value = ""; els.oldImg.value = ""; els.newImg.value = ""; els.file.value = ""; els.fileStatus.textContent = "Nenhum arquivo"; els.select.innerHTML = '<option value="">Cole o script e toque em â€œEncontrar textosâ€</option>'; els.scan.textContent = "Nenhum texto analisado"; setStatus("Aguardando"); updateCounts(); });
+$("copyButton").addEventListener("click", async () => { if (!els.out.value.trim()) { setStatus("NÃ£o hÃ¡ resultado para copiar", "error"); return; } try { await navigator.clipboard.writeText(els.out.value); } catch (error) { els.out.select(); document.execCommand("copy"); } setStatus("Resultado copiado", "success"); });
+$("downloadButton").addEventListener("click", () => { if (!els.out.value.trim()) { setStatus("NÃ£o hÃ¡ resultado para baixar", "error"); return; } const blob = new Blob([els.out.value], { type: "text/plain;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "script-atualizado.lua"; link.click(); URL.revokeObjectURL(link.href); setStatus("Arquivo baixado", "success"); });
 updateCounts();
