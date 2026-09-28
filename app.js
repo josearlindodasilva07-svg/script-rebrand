@@ -1,125 +1,13 @@
 "use strict";
-
-const scriptInput = document.getElementById("scriptInput");
-const oldNameInput = document.getElementById("oldName");
-const newNameInput = document.getElementById("newName");
-const oldImageInput = document.getElementById("oldImage");
-const newImageInput = document.getElementById("newImage");
-const resultOutput = document.getElementById("resultOutput");
-const updateButton = document.getElementById("updateButton");
-const copyButton = document.getElementById("copyButton");
-const statusText = document.getElementById("status");
-
-function setStatus(message, type) {
-  statusText.textContent = message;
-  statusText.style.color = type === "error" ? "crimson" : "green";
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function normalizeImageId(value) {
-  return value
-    .trim()
-    .replace(/^rbxassetid:\/\//i, "")
-    .replace(/\D/g, "");
-}
-
-function replaceAllLiteral(source, oldValue, newValue) {
-  if (!oldValue) {
-    return source;
-  }
-
-  return source.replace(
-    new RegExp(escapeRegExp(oldValue), "g"),
-    function () {
-      return newValue;
-    }
-  );
-}
-
-function replaceImageId(source, oldValue, newValue) {
-  const oldId = normalizeImageId(oldValue);
-  const newId = normalizeImageId(newValue);
-
-  if (!oldId || !newId) {
-    return source;
-  }
-
-  const oldAssetId = "rbxassetid://" + oldId;
-  const newAssetId = "rbxassetid://" + newId;
-
-  let result = source;
-
-  // Troca formatos comuns usados em scripts Roblox.
-  result = replaceAllLiteral(result, oldAssetId, newAssetId);
-
-  // Também troca URLs de thumbnail que contenham o ID antigo.
-  result = replaceAllLiteral(result, oldId, newId);
-
-  return result;
-}
-
-updateButton.addEventListener("click", function () {
-  const original = scriptInput.value;
-
-  if (!original.trim()) {
-    setStatus("Cole um script primeiro.", "error");
-    resultOutput.value = "";
-    return;
-  }
-
-  const oldName = oldNameInput.value;
-  const newName = newNameInput.value;
-  const oldImage = oldImageInput.value;
-  const newImage = newImageInput.value;
-
-  let result = original;
-
-  if (oldName.trim() && newName.trim()) {
-    result = replaceAllLiteral(result, oldName, newName);
-  }
-
-  if (oldImage.trim() && newImage.trim()) {
-    result = replaceImageId(result, oldImage, newImage);
-  }
-
-  resultOutput.value = result;
-
-  const nameChanged =
-    oldName.trim() &&
-    newName.trim() &&
-    result !== original;
-
-  const imageChanged =
-    normalizeImageId(oldImage) &&
-    normalizeImageId(newImage) &&
-    result !== original;
-
-  if (nameChanged || imageChanged) {
-    setStatus("Script atualizado.", "success");
-  } else {
-    setStatus(
-      "Nenhuma alteração feita. Confira os valores atuais.",
-      "error"
-    );
-  }
-});
-
-copyButton.addEventListener("click", async function () {
-  if (!resultOutput.value.trim()) {
-    setStatus("Não há resultado para copiar.", "error");
-    return;
-  }
-
-  try {
-    await navigator.clipboard.writeText(resultOutput.value);
-    setStatus("Resultado copiado.", "success");
-  } catch (error) {
-    resultOutput.focus();
-    resultOutput.select();
-    document.execCommand("copy");
-    setStatus("Resultado copiado.", "success");
-  }
-});
+const $=id=>document.getElementById(id);const scriptInput=$("scriptInput"),textSelect=$("textSelect"),oldName=$("oldName"),newName=$("newName"),oldImage=$("oldImage"),newImage=$("newImage"),resultOutput=$("resultOutput"),status=$("status"),scanStatus=$("scanStatus"),charCount=$("charCount"),resultInfo=$("resultInfo");
+function setStatus(message,type=""){status.textContent=message;status.className="status "+type}
+function esc(value){return value.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function normalizeId(value){return value.trim().replace(/^rbxassetid:\/\//i,"").replace(/\D/g,"")}
+function updateCounts(){charCount.textContent=scriptInput.value.length+" caracteres";resultInfo.textContent=resultOutput.value.length+" caracteres"}
+function scanTexts(){const source=scriptInput.value;const found=[];const seen=new Set();const re=/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;let match;while((match=re.exec(source))){const raw=match[0],value=raw.slice(1,-1);if(value.length<2||value.length>100||seen.has(value))continue;if(/^rbxassetid:\/\//i.test(value)||/^https?:\/\//i.test(value))continue;seen.add(value);found.push(value)}textSelect.innerHTML="";if(!found.length){textSelect.innerHTML='<option value="">Nenhum texto entre aspas encontrado</option>';scanStatus.textContent="Nenhum texto encontrado";return}const first=document.createElement("option");first.value="";first.textContent="Selecione um texto encontrado";textSelect.appendChild(first);found.forEach(value=>{const option=document.createElement("option");option.value=value;option.textContent=value.length>55?value.slice(0,55)+"…":value;textSelect.appendChild(option)});scanStatus.textContent=found.length+" texto(s) encontrado(s)"}
+function replaceLiteral(source,from,to){if(!from)return source;return source.replace(new RegExp(esc(from),"g"),()=>to)}
+function replaceImage(source){const from=normalizeId(oldImage.value),to=normalizeId(newImage.value);if(!from||!to)return source;return replaceLiteral(source,"rbxassetid://"+from,"rbxassetid://"+to).replace(new RegExp("(\\b|[^\\d])"+esc(from)+"(?!\\d)","g"),(m,p)=>p+to)}
+scriptInput.addEventListener("input",updateCounts);textSelect.addEventListener("change",()=>{if(textSelect.value)oldName.value=textSelect.value});$("scanButton").addEventListener("click",scanTexts);
+$("updateButton").addEventListener("click",()=>{const original=scriptInput.value;if(!original.trim()){setStatus("Cole um script primeiro","error");return}let result=original;const from=oldName.value.trim(),to=newName.value.trim();if(from&&to)result=replaceLiteral(result,from,to);result=replaceImage(result);resultOutput.value=result;updateCounts();if(result===original)setStatus("Nenhuma alteração feita","error");else setStatus("Script atualizado","success")});
+$("clearButton").addEventListener("click",()=>{scriptInput.value="";resultOutput.value="";oldName.value="";newName.value="";oldImage.value="";newImage.value="";textSelect.innerHTML='<option value="">Cole o script e toque em “Encontrar textos”</option>';scanStatus.textContent="Nenhum texto analisado";setStatus("Aguardando");updateCounts()});
+$("copyButton").addEventListener("click",async()=>{if(!resultOutput.value.trim()){setStatus("Não há resultado para copiar","error");return}try{await navigator.clipboard.writeText(resultOutput.value)}catch(e){resultOutput.select();document.execCommand("copy")}setStatus("Resultado copiado","success")});updateCounts();
