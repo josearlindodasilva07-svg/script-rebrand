@@ -1,28 +1,43 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
+
 const els = {
-  file: $("fileInput"), fileStatus: $("fileStatus"),
-  script: $("scriptInput"), select: $("textSelect"), old: $("oldName"), next: $("newName"),
-  oldImg: $("oldImage"), newImg: $("newImage"), out: $("resultOutput"), status: $("status"),
-  scan: $("scanStatus"), count: $("charCount"), info: $("resultInfo")
+  file: $("fileInput"),
+  fileStatus: $("fileStatus"),
+  script: $("scriptInput"),
+  select: $("textSelect"),
+  old: $("oldName"),
+  next: $("newName"),
+  oldImg: $("oldImage"),
+  newImg: $("newImage"),
+  out: $("resultOutput"),
+  status: $("status"),
+  scan: $("scanStatus"),
+  count: $("charCount"),
+  info: $("resultInfo")
 };
 
 /* SOM DE CLIQUE */
 const clickSound = new Audio("click.mp3");
 clickSound.preload = "auto";
 clickSound.volume = 0.35;
+clickSound.load();
 
 function playClick() {
   try {
-    clickSound.currentTime = 0;
-    clickSound.play().catch(() => {});
+    const sound = clickSound.cloneNode();
+    sound.volume = 0.35;
+    sound.play().catch(() => {});
   } catch (_) {}
 }
 
 document.addEventListener("click", (event) => {
   const target = event.target.closest("button, select");
-  if (target) playClick();
+
+  if (target) {
+    playClick();
+  }
 });
 
 function setStatus(message, type) {
@@ -31,28 +46,44 @@ function setStatus(message, type) {
 }
 
 function normalizeId(value) {
-  return value.trim().replace(/^rbxassetid:\/\//i, "").replace(/\D/g, "");
+  return value
+    .trim()
+    .replace(/^rbxassetid:\/\//i, "")
+    .replace(/\D/g, "");
 }
 
 function updateCounts() {
-  els.count.textContent = els.script.value.length + " caracteres";
-  els.info.textContent = els.out.value.length + " caracteres";
+  els.count.textContent =
+    els.script.value.length + " caracteres";
+
+  els.info.textContent =
+    els.out.value.length + " caracteres";
 }
 
 function replaceInsideStrings(source, from, to, insensitive) {
   if (!from) return source;
-  const pattern = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
+
+  const pattern =
+    /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
 
   return source.replace(pattern, function (literal) {
     const quote = literal[0];
     const body = literal.slice(1, -1);
     const flags = insensitive ? "gi" : "g";
-    const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    return quote + body.replace(
-      new RegExp(escaped, flags),
-      () => to
-    ) + quote;
+    const escaped = from.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&"
+    );
+
+    return (
+      quote +
+      body.replace(
+        new RegExp(escaped, flags),
+        () => to
+      ) +
+      quote
+    );
   });
 }
 
@@ -60,10 +91,15 @@ function replaceImageIds(source) {
   const oldId = normalizeId(els.oldImg.value);
   const newId = normalizeId(els.newImg.value);
 
-  if (!oldId || !newId) return source;
+  if (!oldId || !newId) {
+    return source;
+  }
 
-  const oldAsset = "rbxassetid://" + oldId;
-  const newAsset = "rbxassetid://" + newId;
+  const oldAsset =
+    "rbxassetid://" + oldId;
+
+  const newAsset =
+    "rbxassetid://" + newId;
 
   let result = replaceInsideStrings(
     source,
@@ -73,8 +109,14 @@ function replaceImageIds(source) {
   );
 
   result = result.replace(
-    new RegExp("(^|[^\\d])" + oldId + "(?!\\d)", "g"),
-    (match, prefix) => prefix + newId
+    new RegExp(
+      "(^|[^\\d])" +
+      oldId +
+      "(?!\\d)",
+      "g"
+    ),
+    (match, prefix) =>
+      prefix + newId
   );
 
   return result;
@@ -83,23 +125,34 @@ function replaceImageIds(source) {
 function scanTexts() {
   const found = [];
   const seen = new Set();
-  const pattern = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
+
+  const pattern =
+    /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
 
   let match;
 
-  while ((match = pattern.exec(els.script.value))) {
-    const value = match[0].slice(1, -1);
+  while (
+    (match = pattern.exec(
+      els.script.value
+    ))
+  ) {
+    const value =
+      match[0].slice(1, -1);
 
     if (
       value.length < 2 ||
       value.length > 120 ||
       seen.has(value)
-    ) continue;
+    ) {
+      continue;
+    }
 
     if (
       /^rbxassetid:\/\//i.test(value) ||
       /^https?:\/\//i.test(value)
-    ) continue;
+    ) {
+      continue;
+    }
 
     seen.add(value);
     found.push(value);
@@ -111,12 +164,17 @@ function scanTexts() {
     els.select.innerHTML =
       '<option value="">Nenhum texto encontrado</option>';
 
-    els.scan.textContent = "Nenhum texto encontrado";
+    els.scan.textContent =
+      "Nenhum texto encontrado";
+
     return;
   }
 
   els.select.add(
-    new Option("Selecione um texto encontrado", "")
+    new Option(
+      "Selecione um texto encontrado",
+      ""
+    )
   );
 
   found.forEach((value) => {
@@ -131,14 +189,18 @@ function scanTexts() {
   });
 
   els.scan.textContent =
-    found.length + " texto(s) encontrado(s)";
+    found.length +
+    " texto(s) encontrado(s)";
 }
 
 function changeBrand(source) {
   let result = source;
 
-  const oldValue = els.old.value.trim();
-  const newValue = els.next.value.trim();
+  const oldValue =
+    els.old.value.trim();
+
+  const newValue =
+    els.next.value.trim();
 
   if (oldValue && newValue) {
     result = replaceInsideStrings(
@@ -154,8 +216,9 @@ function changeBrand(source) {
 
 function maskLua(source) {
   return source.replace(
-    /(--\[(=*)\[[\s\S]*?\]\2\[[\s\S]*?\]\2\]|--[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\[(=*)\[[\s\S]*?\]\3\])/g,
-    (part) => part.replace(/[^\n]/g, " ")
+    /(--\[(=*)\[[\s\S]*?\]\2\]|--[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\[(=*)\[[\s\S]*?\]\3\])/g,
+    (part) =>
+      part.replace(/[^\n]/g, " ")
   );
 }
 
@@ -165,56 +228,67 @@ const terms = {
     en: "Close",
     es: "Cerrar"
   },
+
   settings: {
     pt: "ConfiguraÃ§Ãµes",
     en: "Settings",
     es: "ConfiguraciÃ³n"
   },
+
   loading: {
     pt: "Carregando",
     en: "Loading",
     es: "Cargando"
   },
+
   button: {
     pt: "BotÃ£o",
     en: "Button",
     es: "BotÃ³n"
   },
+
   open: {
     pt: "Abrir",
     en: "Open",
     es: "Abrir"
   },
+
   search: {
     pt: "Pesquisar",
     en: "Search",
     es: "Buscar"
   },
+
   save: {
     pt: "Salvar",
     en: "Save",
     es: "Guardar"
   },
+
   cancel: {
     pt: "Cancelar",
     en: "Cancel",
     es: "Cancelar"
   },
+
   yes: {
     pt: "Sim",
     en: "Yes",
     es: "SÃ­"
   },
+
   no: {
     pt: "NÃ£o",
     en: "No",
     es: "No"
   },
+
   enabled: {
     pt: "Ativado",
     en: "Enabled",
     es: "Activado"
   },
+
   disabled: {
     pt: "Desativado",
     en: "Disabled",
@@ -235,50 +309,66 @@ function translate(source, language) {
   let result = source;
 
   Object.keys(aliases)
-    .sort((a, b) => b.length - a.length)
+    .sort(
+      (a, b) =>
+        b.length - a.length
+    )
     .forEach((from) => {
-      if (from !== aliases[from]) {
-        result = replaceInsideStrings(
-          result,
-          from,
-          aliases[from],
-          false
-        );
+      if (
+        from !== aliases[from]
+      ) {
+        result =
+          replaceInsideStrings(
+            result,
+            from,
+            aliases[from],
+            false
+          );
       }
     });
 
   return result;
 }
 
-$("fileInput").addEventListener("change", () => {
-  const file = $("fileInput").files[0];
+$("fileInput").addEventListener(
+  "change",
+  () => {
+    const file =
+      $("fileInput").files[0];
 
-  if (!file) return;
+    if (!file) return;
 
-  const reader = new FileReader();
+    const reader =
+      new FileReader();
 
-  reader.onload = () => {
-    els.script.value = String(reader.result || "");
-    els.fileStatus.textContent = file.name;
+    reader.onload = () => {
+      els.script.value =
+        String(
+          reader.result || ""
+        );
 
-    updateCounts();
-    scanTexts();
+      els.fileStatus.textContent =
+        file.name;
 
-    setStatus(
-      "Arquivo carregado",
-      "success"
-    );
-  };
+      updateCounts();
+      scanTexts();
 
-  reader.onerror = () => {
-    setStatus(
-      "NÃ£o foi possÃ­vel ler o arquivo",
-      "error"
-    );
-  };
+      setStatus(
+        "Arquivo carregado",
+        "success"
+      );
+    };
 
-  reader.readAsText(file);
-});
+    reader.onerror = () => {
+      setStatus(
+        "NÃ£o foi possÃ­vel ler o arquivo",
+        "error"
+      );
+    };
+
+    reader.readAsText(file);
+  }
+);
 
 $("scanButton").addEventListener(
   "click",
@@ -289,7 +379,8 @@ els.select.addEventListener(
   "change",
   () => {
     if (els.select.value) {
-      els.old.value = els.select.value;
+      els.old.value =
+        els.select.value;
     }
   }
 );
@@ -297,40 +388,56 @@ els.select.addEventListener(
 $("operation").addEventListener(
   "change",
   (event) => {
-    ["replacePanel", "translatePanel"]
-      .forEach((id) => {
-        $(id).classList.add("hidden");
-      });
+    [
+      "replacePanel",
+      "translatePanel"
+    ].forEach((id) => {
+      $(id).classList.add(
+        "hidden"
+      );
+    });
 
     $(
-      event.target.value === "replace"
+      event.target.value ===
+        "replace"
         ? "replacePanel"
         : "translatePanel"
-    ).classList.remove("hidden");
+    ).classList.remove(
+      "hidden"
+    );
   }
 );
 
 $("processButton").addEventListener(
   "click",
   () => {
-    const source = els.script.value;
+    const source =
+      els.script.value;
 
     if (!source.trim()) {
       setStatus(
         "Cole um script primeiro",
         "error"
       );
+
       return;
     }
 
     let result = source;
-    const operation = $("operation").value;
 
-    if (operation === "replace") {
-      result = changeBrand(source);
+    const operation =
+      $("operation").value;
+
+    if (
+      operation === "replace"
+    ) {
+      result =
+        changeBrand(source);
     }
 
-    if (operation === "translate") {
+    if (
+      operation === "translate"
+    ) {
       result = translate(
         source,
         $("language").value
@@ -373,6 +480,7 @@ $("clearButton").addEventListener(
       "Nenhum texto analisado";
 
     setStatus("Aguardando");
+
     updateCounts();
   }
 );
@@ -385,6 +493,7 @@ $("copyButton").addEventListener(
         "NÃ£o hÃ¡ resultado para copiar",
         "error"
       );
+
       return;
     }
 
@@ -394,7 +503,9 @@ $("copyButton").addEventListener(
       );
     } catch (error) {
       els.out.select();
-      document.execCommand("copy");
+      document.execCommand(
+        "copy"
+      );
     }
 
     setStatus(
@@ -412,13 +523,15 @@ $("downloadButton").addEventListener(
         "NÃ£o hÃ¡ resultado para baixar",
         "error"
       );
+
       return;
     }
 
     const blob = new Blob(
       [els.out.value],
       {
-        type: "text/plain;charset=utf-8"
+        type:
+          "text/plain;charset=utf-8"
       }
     );
 
@@ -433,7 +546,9 @@ $("downloadButton").addEventListener(
 
     link.click();
 
-    URL.revokeObjectURL(link.href);
+    URL.revokeObjectURL(
+      link.href
+    );
 
     setStatus(
       "Arquivo baixado",
